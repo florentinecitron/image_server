@@ -19,11 +19,15 @@ cd -
 
 conda create --name oscar python=3.7
 conda activate oscar
+conda install -c anaconda openjdk
 conda install pytorch==1.2.0 torchvision==0.4.0 cudatoolkit=10.0 -c pytorch
+pip install -r requirements.txt
 cd Oscar
 python setup.py build develop
 pip install -r requirements.txt
 pip install flask pandas
+cd coco_caption
+./get_stanford_models.sh
 conda deactivate
 cd -
 
