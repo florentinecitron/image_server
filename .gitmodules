@@ -1,0 +1,9 @@
+[submodule "Oscar"]
+	path = Oscar
+	url = git@github.com:microsoft/Oscar.git
+[submodule "scene_graph_benchmark"]
+	path = scene_graph_benchmark
+	url = https://github.com/microsoft/scene_graph_benchmark
+[submodule "image-description-sequences"]
+	path = image-description-sequences
+	url = https://github.com/clp-research/image-description-sequences
