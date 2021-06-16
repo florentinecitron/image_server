@@ -32,7 +32,83 @@ from oscar.utils.caption_evaluate import evaluate_on_coco_caption
 import fire
 
 
-def evaluate(annotations_file, generated_caption_dir, out_dir):
+def evaluate_captions(annotations_file, generated_caption_dir, ade_image_list_file, out_dir):
+    # annotations_file = "/home/nrg/projects/vqa-test/image_server/image-description-sequences/data/captions.csv"
+    # generated_caption_dir = "/project/image_server/caption_output"
+
+    image_id_to_path = {}
+    with open(ade_image_list_file) as i:
+        for _image_path in (x.strip() for x in i):
+            # map image_id to image_path training/d/dining_room/ADE_train_00006889.jpg
+            # take first 5 numbers of path
+            # prepend '0' or '1'
+            # parse as int
+            image_path = _image_path.split("/", 1)[1]
+            which, _ = image_path.split("/", 1)
+            _id = ("1" if which == "validation" else "0") + (image_path.rsplit("/", 1)[1].split(".", 1)[0].rsplit("_", 1)[1].rjust(5, "0")[-5:])
+            image_id = int(_id)
+            image_id_to_path[image_id] = image_path
+
+    annotation_cols = "ignore caption_id image_id caption".split()
+    df_ann = (
+        pd.read_csv(
+            annotations_file,
+            names=annotation_cols,
+            delimiter="\t",
+            skiprows=1,
+        )
+        .drop("ignore", axis=1)
+    )
+    df_ann["image_path"] = df_ann.image_id.map(image_id_to_path.__getitem__)
+    df_ann.sort_values("image_path", inplace=True)
+
+    image_ids = set(df_ann.image_path)
+
+    # create label.json
+    #for k, _group in it.groupby(
+    #    df_ann.itertuples(), key=lambda x: x.image_path.split("/")[:2]
+    #):
+    annotations = []
+    for idx, el in enumerate(df_ann.itertuples()):
+        image_id = el.image_path
+        caption_id = str(idx)
+        caption = el.caption
+        annotations.append(
+            {"image_id": image_id, "id": caption_id, "caption": caption}
+        )
+
+    label_file = os.path.join(out_dir, "label.json")
+    with open(label_file, "w") as o:
+        print(json.dumps({"annotations": annotations, "images": [{"id": a["image_id"]} for a in annotations], "type": "", "info": "", "licenses": ""}), file=o)
+
+    # create res_tsv
+    tsv_out = []
+    caption_file_glob = os.path.join(
+        generated_caption_dir,
+        "*/*/pred.coco_caption.vinvl_test_yaml.beam5.max20.odlabels.tsv",
+    )
+    for caption_file_path in glob.glob(caption_file_glob):
+        with open(caption_file_path) as i:
+            # /home/users/ngow/data/ImageCorpora/ADE20K_2016_07_26/images/training/a/access_road/ADE_train_00001022 \t [{"caption": "a road with a tree and a bench on the side of it.", "conf": 0.9170628786087036}]
+            reader = csv.reader(i, delimiter="\t")
+            for image_path, caption_json in reader:
+                # image_id = "/home/users/ngow/data/ImageCorpora/ADE20K_2016_07_26/images/training/a/alley/ADE_train_00001274".rsplit("/", 4)
+                image_id = "/".join(image_path.rsplit("/", 4)[1:]) + ".jpg"
+                if image_id not in image_ids:
+                    continue
+                caption = json.loads(caption_json)[0]
+                tsv_out.append((image_id, json.dumps([caption])))
+
+    res_file = os.path.join(out_dir, "res.tsv")
+    with open(res_file, "w") as o:
+        for image_id, caption_json in tsv_out:
+            print(f"{image_id}\t{caption_json}", file=o)
+
+    evaluate_outfile = os.path.join(out_dir, "evaluate_result.json")
+    evaluate_on_coco_caption(res_file, label_file, evaluate_outfile)
+
+
+def evaluate_sequences(annotations_file, generated_caption_dir, out_dir):
     # annotations_file = "/home/nrg/projects/vqa-test/image_server/image-description-sequences/data/sequences.csv"
     # generated_caption_dir = "/project/image_server/caption_output"
 
@@ -66,7 +142,6 @@ def evaluate(annotations_file, generated_caption_dir, out_dir):
     label_file = os.path.join(out_dir, "label.json")
     with open(label_file, "w") as o:
         print(json.dumps({"annotations": annotations, "images": [{"id": a["image_id"]} for a in annotations], "type": "", "info": "", "licenses": ""}), file=o)
-
 
     # create res_tsv
     tsv_out = []
