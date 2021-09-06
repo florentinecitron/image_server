@@ -21,16 +21,17 @@ from maskrcnn_benchmark.data.datasets.utils.image_ops import img_from_base64
 which = sys.argv[1]
 
 letter = sys.argv[2]
+
 if len(letter) == 0:
     raise AssertionError("must include letter as argument [a-z] or special folder (misc, outliers)")
 
-output_dir = f"image_tsv_files/{which}/{letter}"
+output_dir = f"image_tsv_files/{which}/{letter}_extra"
 
 if not op.exists(output_dir):
     os.makedirs(output_dir, exist_ok=True)
 
 # To generate a tsv file:
-data_path = f"/home/users/ngow/data/ImageCorpora/ADE20K_2016_07_26/images/{which}/{letter}/*/*.jpg"
+data_path = f"/home/users/ngow/data/ImageCorpora/ADE20K_2016_07_26/images/{which}/{letter}/*/*/*.jpg"
 img_list = glob.glob(data_path)
 tsv_file = f"{output_dir}/val.tsv"
 label_file = f"{output_dir}/val.label.tsv"

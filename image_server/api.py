@@ -66,6 +66,8 @@ class SingleImageDataset(VQADataset):
         )
         label_map = {label: i for i, label in enumerate(self.labels)}
 
+        #logging.info(len(self.examples))
+
         self.label_map = label_map
         logging.info(self.img_features.keys())
         self.features = self.tensorize(
@@ -76,6 +78,7 @@ class SingleImageDataset(VQADataset):
             pad_on_left=False,
             pad_token_segment_id=0
         )
+        logging.info(len(self.features))
 
     def get_img_feature(self, image_id):
         """ decode the image feature """
@@ -139,6 +142,7 @@ def create_app(db_path):
 
         image_id = request.args.get('image')
         question = request.args.get('question')
+        logging.info("Answering question %s for image_id %s", repr(question), image_id)
 
         cur = get_db().cursor()
         cur.execute("select image_feature from image_features where image_id = :image_id limit 1", {"image_id": image_id})
@@ -170,6 +174,7 @@ def create_app(db_path):
     def get_caption():
         # curl 'localhost:5000/get_caption?image=ADE_train_00001505'
         image_id = request.args.get('image')
+        logging.info("Requesting caption for image_id %s", image_id)
         cur = get_db().cursor()
         cur.execute("select caption from captions where image_id = :image_id limit 1", {"image_id": image_id})
         caption = cur.fetchone()[0]
